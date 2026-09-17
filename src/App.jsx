@@ -12,6 +12,7 @@ import Despesas from './pages/Despesas.jsx'
 import CapturarFoto from './pages/CapturarFoto.jsx'
 import CapturarXML from './pages/CapturarXML.jsx'
 import ConfirmarDespesa from './pages/ConfirmarDespesa.jsx'
+import Relatorios from './pages/Relatorios.jsx'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = carregando, null = deslogado
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/despesas/foto" element={<CapturarFoto />} />
         <Route path="/despesas/xml" element={<CapturarXML />} />
         <Route path="/despesas/confirmar" element={<ConfirmarDespesa />} />
+        <Route path="/relatorios" element={<Relatorios />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -32,6 +32,8 @@ export default function NovaDespesa() {
   const [fornecedorId, setFornecedorId] = useState('')
   const [dataCompra, setDataCompra] = useState(() => new Date().toISOString().slice(0, 10))
   const [formaPagamento, setFormaPagamento] = useState('pix')
+  const [aPagarDepois, setAPagarDepois] = useState(false)
+  const [vencimento, setVencimento] = useState('')
   const [itens, setItens] = useState([novoItem()])
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -88,6 +90,7 @@ export default function NovaDespesa() {
     setErro('')
     if (!obraId) return setErro('Selecione a obra.')
     if (itens.some((it) => !it.produto.trim())) return setErro('Preencha o nome de todos os itens.')
+    if (aPagarDepois && !vencimento) return setErro('Informe o vencimento ou desmarque "ainda vou pagar".')
 
     setSalvando(true)
     const { data: despesa, error: errDespesa } = await supabase
@@ -99,6 +102,7 @@ export default function NovaDespesa() {
         data_compra: dataCompra,
         forma_pagamento: formaPagamento,
         valor_total: totalGeral,
+        status_pagamento: aPagarDepois ? 'pendente' : 'pago',
         origem: 'manual',
       })
       .select()
@@ -125,13 +129,24 @@ export default function NovaDespesa() {
     }))
 
     const { error: errItens } = await supabase.from('itens_compra').insert(itensParaInserir)
-    setSalvando(false)
 
     if (errItens) {
+      setSalvando(false)
       setErro('Despesa salva, mas houve erro ao salvar os itens: ' + errItens.message)
       return
     }
 
+    if (aPagarDepois) {
+      await supabase.from('contas_pagar').insert({
+        despesa_id: despesa.id,
+        fornecedor_id: fornecedorId || null,
+        valor: totalGeral,
+        vencimento,
+        status: 'pendente',
+      })
+    }
+
+    setSalvando(false)
     navigate(`/obras/${obraId}`)
   }
 
@@ -186,6 +201,18 @@ export default function NovaDespesa() {
             </select>
           </div>
         </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+          <input type="checkbox" checked={aPagarDepois} onChange={(e) => setAPagarDepois(e.target.checked)} />
+          Ainda vou pagar essa despesa (entra em Contas a Pagar)
+        </label>
+
+        {aPagarDepois && (
+          <div>
+            <label className="label">Vencimento</label>
+            <input className="input" type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} required />
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

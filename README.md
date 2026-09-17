@@ -66,11 +66,24 @@ painel do projeto.
 4. Pronto — as opções "Tirar foto da nota" e "Enviar XML da nota" no menu
    "Despesa" já funcionam.
 
+## Fase 3 — contas a pagar e relatórios
+
+1. No SQL Editor do Supabase, rode `supabase/migration_fase3.sql` (só cria
+   índices, não mexe em dados).
+2. Pronto — o menu "Relatórios" já tem duas abas: **Resumo** (fechamento por
+   período — hoje/7 dias/mês/personalizado — com quebra por categoria, obra
+   e fornecedor) e **Contas a pagar** (despesas marcadas como "ainda vou
+   pagar" no lançamento, com botão de marcar como pago).
+3. Ao lançar uma despesa (manual, foto ou XML), marque "Ainda vou pagar essa
+   despesa" e informe o vencimento se ela ainda não foi paga — senão ela já
+   entra como paga.
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —
   foto e XML já estão prontos).
-- Fase 3: contas a pagar, fluxo de caixa, relatórios exportáveis.
+- Fase 3: relatórios exportáveis em PDF/Excel (hoje só tem visualização
+  dentro do app).
 - Fase 4: IA de consulta em linguagem natural.
 - Fase 5: permissões multiusuário (o schema já tem `usuarios` e
   `permissoes_obra` prontos para isso).
