@@ -30,7 +30,7 @@ export default function Layout({ children }) {
           zIndex: 10,
         }}
       >
-        <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 40, imageRendering: '-webkit-optimize-contrast' }} />
+        <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 48, imageRendering: '-webkit-optimize-contrast' }} />
         <Link
           to="/assistente"
           style={{
