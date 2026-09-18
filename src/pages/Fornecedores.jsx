@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 function FornecedorForm({ inicial, onSalvar, onCancelar, salvando }) {
   const [nome, setNome] = useState(inicial?.nome || '')
@@ -43,6 +44,7 @@ function FornecedorForm({ inicial, onSalvar, onCancelar, salvando }) {
 }
 
 export default function Fornecedores() {
+  const podeEditar = usePermissao('admin', 'financeiro')
   const [lista, setLista] = useState([])
   const [editandoId, setEditandoId] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -73,8 +75,12 @@ export default function Fornecedores() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ fontWeight: 700 }}>Novo fornecedor</div>
-      <FornecedorForm onSalvar={criar} salvando={salvando} />
+      {podeEditar && (
+        <>
+          <div style={{ fontWeight: 700 }}>Novo fornecedor</div>
+          <FornecedorForm onSalvar={criar} salvando={salvando} />
+        </>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {lista.map((f) =>
@@ -94,9 +100,11 @@ export default function Fornecedores() {
                   {f.cnpj || 'CNPJ não informado'}{f.telefone ? ` · ${f.telefone}` : ''}
                 </div>
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => setEditandoId(f.id)} style={{ padding: '6px 12px', fontSize: 12 }}>
-                Editar
-              </button>
+              {podeEditar && (
+                <button type="button" className="btn btn-ghost" onClick={() => setEditandoId(f.id)} style={{ padding: '6px 12px', fontSize: 12 }}>
+                  Editar
+                </button>
+              )}
             </div>
           )
         )}

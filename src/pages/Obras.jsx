@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 export default function Obras() {
+  const podeCriar = usePermissao('admin', 'financeiro')
   const [obras, setObras] = useState([])
   const [novoNome, setNovoNome] = useState('')
   const [novoOrcamento, setNovoOrcamento] = useState('')
@@ -33,26 +35,28 @@ export default function Obras() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <form onSubmit={criarObra} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontWeight: 700 }}>Nova obra</div>
-        <div>
-          <label className="label">Nome</label>
-          <input className="input" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} required />
-        </div>
-        <div>
-          <label className="label">Orçamento previsto (R$)</label>
-          <input
-            className="input"
-            type="number"
-            step="0.01"
-            value={novoOrcamento}
-            onChange={(e) => setNovoOrcamento(e.target.value)}
-          />
-        </div>
-        <button className="btn btn-primary" disabled={salvando}>
-          {salvando ? 'Salvando…' : 'Cadastrar obra'}
-        </button>
-      </form>
+      {podeCriar && (
+        <form onSubmit={criarObra} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontWeight: 700 }}>Nova obra</div>
+          <div>
+            <label className="label">Nome</label>
+            <input className="input" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} required />
+          </div>
+          <div>
+            <label className="label">Orçamento previsto (R$)</label>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              value={novoOrcamento}
+              onChange={(e) => setNovoOrcamento(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-primary" disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Cadastrar obra'}
+          </button>
+        </form>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {obras.map((o) => (

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 const NAV = [
   { to: '/', label: 'Início', icon: '🏠' },
@@ -11,6 +12,7 @@ const NAV = [
 
 export default function Layout({ children }) {
   const { pathname } = useLocation()
+  const souAdmin = usePermissao('admin')
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff' }}>
@@ -46,6 +48,22 @@ export default function Layout({ children }) {
         >
           💬 Assistente
         </Link>
+        {souAdmin && (
+          <Link
+            to="/usuarios"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              textDecoration: 'none',
+              color: pathname === '/usuarios' ? '#F2701C' : '#0B1F3A',
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            👤 Usuários
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => {

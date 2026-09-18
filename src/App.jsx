@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './lib/AuthContext.jsx'
 import { supabase } from './lib/supabaseClient'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
@@ -15,15 +15,10 @@ import ConfirmarDespesa from './pages/ConfirmarDespesa.jsx'
 import DespesaDetalhe from './pages/DespesaDetalhe.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Assistente from './pages/Assistente.jsx'
+import UsuariosAdmin from './pages/UsuariosAdmin.jsx'
 
-export default function App() {
-  const [session, setSession] = useState(undefined) // undefined = carregando, null = deslogado
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => setSession(sess))
-    return () => sub.subscription.unsubscribe()
-  }, [])
+function AppInterno() {
+  const { session, usuario, carregandoUsuario } = useAuth()
 
   if (session === undefined) {
     return <div style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>Carregando…</div>
@@ -31,6 +26,26 @@ export default function App() {
 
   if (!session) {
     return <Login />
+  }
+
+  if (carregandoUsuario) {
+    return <div style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>Carregando…</div>
+  }
+
+  if (!usuario || !usuario.ativo) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="card" style={{ maxWidth: 360, textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Acesso não liberado</div>
+          <div style={{ color: '#6B7280', fontSize: 14, marginBottom: 16 }}>
+            Sua conta não tem acesso liberado no ObrAI. Fale com o administrador.
+          </div>
+          <button className="btn btn-ghost" onClick={() => supabase.auth.signOut()}>
+            Sair
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -48,8 +63,17 @@ export default function App() {
         <Route path="/despesas/:id" element={<DespesaDetalhe />} />
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/assistente" element={<Assistente />} />
+        <Route path="/usuarios" element={<UsuariosAdmin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInterno />
+    </AuthProvider>
   )
 }

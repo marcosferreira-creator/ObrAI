@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
@@ -48,6 +49,7 @@ function BarraLista({ titulo, itens }) {
 }
 
 export default function Relatorios() {
+  const podeQuitar = usePermissao('admin', 'financeiro')
   const [aba, setAba] = useState('resumo') // 'resumo' | 'contas'
 
   const [obras, setObras] = useState([])
@@ -376,9 +378,11 @@ export default function Relatorios() {
                   <div style={{ fontWeight: 700 }}>
                     {Number(c.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </div>
-                  <button type="button" className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => marcarComoPago(c)}>
-                    Marcar como pago
-                  </button>
+                  {podeQuitar && (
+                    <button type="button" className="btn btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => marcarComoPago(c)}>
+                      Marcar como pago
+                    </button>
+                  )}
                 </div>
               </div>
             )

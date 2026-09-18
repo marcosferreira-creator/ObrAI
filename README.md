@@ -109,6 +109,32 @@ painel do projeto.
      desativado só quando o app está aberto pela tela de início (instalado
      como PWA) — no navegador normal continua funcionando.
 
+## Fase 5 — multiusuário com permissões
+
+1. No SQL Editor do Supabase, rode `supabase/migration_fase5.sql`. Isso:
+   - cria uma linha em `usuarios` pra cada login que já existe hoje no
+     Supabase Auth — a conta mais antiga vira **admin** automaticamente
+     (deve ser a sua), as demais (inclusive contas de teste) entram como
+     **visualização**;
+   - reescreve as regras de segurança do banco pra checar o papel de quem
+     está logado, em vez de liberar geral pra qualquer autenticado.
+2. No painel do Supabase, **Edge Functions → Create a new function**, nome
+   `gerenciar-usuarios`, cole o conteúdo de
+   `supabase/functions/gerenciar-usuarios/index.ts`. Deploy. (Não precisa
+   secret nova.)
+3. No app, entra em **"👤 Usuários"** no topo (só aparece pra quem é
+   admin) → confirma que sua conta está como Admin → cria o acesso dos
+   seus funcionários (nome, e-mail, senha provisória, permissão) e passa
+   as credenciais pra cada um.
+
+Permissões disponíveis: **Admin** (tudo), **Financeiro** (lança/edita
+despesas e fornecedores, vê tudo), **Mestre de obra / Comprador** (só
+lança despesa — foto, XML ou manual — não edita depois), **Visualização**
+(só consulta). Todo mundo vê todas as obras — a permissão controla o que
+cada um pode *fazer*, não o que vê. Se no futuro você precisar restringir
+por obra específica, o banco já tem a tabela `permissoes_obra` pronta pra
+isso — é só avisar.
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —

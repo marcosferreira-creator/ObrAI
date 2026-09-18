@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 function totalItem(it) {
   return Number(it.quantidade || 0) * Number(it.preco_unitario || 0)
@@ -9,6 +10,7 @@ function totalItem(it) {
 export default function DespesaDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const podeEditar = usePermissao('admin', 'financeiro')
 
   const [carregando, setCarregando] = useState(true)
   const [obraId, setObraId] = useState('')
@@ -329,14 +331,18 @@ export default function DespesaDetalhe() {
       {erro && <div style={{ color: '#D92D20' }}>{erro}</div>}
       {ok && <div style={{ color: '#16A34A' }}>Salvo com sucesso.</div>}
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn btn-accent" disabled={salvando} style={{ flex: 1 }}>
-          {salvando ? 'Salvando…' : 'Salvar alterações'}
-        </button>
-        <button type="button" className="btn btn-ghost" style={{ color: '#D92D20' }} disabled={excluindo} onClick={excluir}>
-          {excluindo ? 'Excluindo…' : 'Excluir'}
-        </button>
-      </div>
+      {podeEditar ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-accent" disabled={salvando} style={{ flex: 1 }}>
+            {salvando ? 'Salvando…' : 'Salvar alterações'}
+          </button>
+          <button type="button" className="btn btn-ghost" style={{ color: '#D92D20' }} disabled={excluindo} onClick={excluir}>
+            {excluindo ? 'Excluindo…' : 'Excluir'}
+          </button>
+        </div>
+      ) : (
+        <div style={{ color: '#6B7280', fontSize: 13 }}>Seu acesso é só visualização — não dá pra editar essa despesa.</div>
+      )}
     </form>
   )
 }

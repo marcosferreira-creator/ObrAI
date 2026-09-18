@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { usePermissao } from '../lib/AuthContext.jsx'
 
 function fmt(v) {
   return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -8,6 +9,7 @@ function fmt(v) {
 
 export default function ObraDetalhe() {
   const { id } = useParams()
+  const podeEditar = usePermissao('admin', 'financeiro')
   const [obra, setObra] = useState(null)
   const [despesas, setDespesas] = useState([])
   const [etapas, setEtapas] = useState([])
@@ -73,10 +75,12 @@ export default function ObraDetalhe() {
           ))}
           {etapas.length === 0 && <span style={{ color: '#6B7280', fontSize: 13 }}>Nenhuma etapa cadastrada.</span>}
         </div>
-        <form onSubmit={criarEtapa} style={{ display: 'flex', gap: 8 }}>
-          <input className="input" placeholder="Nome da etapa" value={novaEtapa} onChange={(e) => setNovaEtapa(e.target.value)} />
-          <button className="btn btn-ghost">Adicionar</button>
-        </form>
+        {podeEditar && (
+          <form onSubmit={criarEtapa} style={{ display: 'flex', gap: 8 }}>
+            <input className="input" placeholder="Nome da etapa" value={novaEtapa} onChange={(e) => setNovaEtapa(e.target.value)} />
+            <button className="btn btn-ghost">Adicionar</button>
+          </form>
+        )}
       </div>
 
       <div>
