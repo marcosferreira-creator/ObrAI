@@ -78,12 +78,23 @@ painel do projeto.
    despesa" e informe o vencimento se ela ainda não foi paga — senão ela já
    entra como paga.
 
+## Fase 4 — IA de consulta em linguagem natural
+
+1. No painel do Supabase, **Edge Functions → Create a new function**, nome
+   `consultar-ia`, cole o conteúdo de
+   `supabase/functions/consultar-ia/index.ts`. Deploy.
+2. Não precisa configurar secret nova — usa a mesma `ANTHROPIC_API_KEY` já
+   criada na Fase 2.
+3. No app, clica em **"💬 Assistente"** no topo da tela e pergunta coisas
+   como "quanto gastei este mês", "teve algum aumento de custo incomum" ou
+   "existe alguma despesa duplicada". A IA responde só com base nos dados
+   reais cadastrados — nunca inventa números.
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —
   foto e XML já estão prontos).
 - Fase 3: relatórios exportáveis em PDF/Excel (hoje só tem visualização
   dentro do app).
-- Fase 4: IA de consulta em linguagem natural.
 - Fase 5: permissões multiusuário (o schema já tem `usuarios` e
   `permissoes_obra` prontos para isso).

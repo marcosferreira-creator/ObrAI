@@ -27,6 +27,21 @@ export default function Layout({ children }) {
         }}
       >
         <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 28 }} />
+        <Link
+          to="/assistente"
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            textDecoration: 'none',
+            color: pathname === '/assistente' ? '#F2701C' : '#0B1F3A',
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          💬 Assistente
+        </Link>
       </header>
 
       <main style={{ flex: 1, padding: 16, paddingBottom: 90, maxWidth: 720, width: '100%', margin: '0 auto' }}>
