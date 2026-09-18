@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 
 const NAV = [
   { to: '/', label: 'Início', icon: '🏠' },
@@ -45,6 +46,23 @@ export default function Layout({ children }) {
         >
           💬 Assistente
         </Link>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Sair da conta?')) supabase.auth.signOut()
+          }}
+          style={{
+            border: 'none',
+            background: 'none',
+            color: '#6B7280',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          Sair
+        </button>
       </header>
 
       <main

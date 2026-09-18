@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0B1F3A" />
+    <meta id="viewport-meta" name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ObrAI — Gestão Inteligente de Obras</title>
+    <script>
+      // Desativa o zoom só quando o app está aberto como PWA (adicionado à
+      // tela de início) — no navegador normal (site) o zoom continua ativo.
+      (function () {
+        var ehStandalone =
+          window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+        if (ehStandalone) {
+          var meta = document.getElementById('viewport-meta')
+          if (meta) {
+            meta.setAttribute(
+              'content',
+              'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+            )
+          }
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
