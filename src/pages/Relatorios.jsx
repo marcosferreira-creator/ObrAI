@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
@@ -172,6 +175,91 @@ export default function Relatorios() {
 
   const hoje = hojeISO()
 
+  function exportarPDF() {
+    const doc = new jsPDF()
+    doc.setFontSize(14)
+    doc.text('ObrAI — Relatório de despesas', 14, 16)
+    doc.setFontSize(10)
+    doc.text(`Período: ${dataInicio} a ${dataFim}`, 14, 23)
+    doc.text(
+      `Total: ${resumo.totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${resumo.qtdDespesas} despesa(s))`,
+      14,
+      29
+    )
+
+    let y = 35
+    if (resumo.porCategoria.length) {
+      doc.text('Por categoria', 14, y)
+      autoTable(doc, {
+        startY: y + 3,
+        head: [['Categoria', 'Valor']],
+        body: resumo.porCategoria.map((c) => [c.nome, c.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]),
+        styles: { fontSize: 9 },
+      })
+      y = doc.lastAutoTable.finalY + 8
+    }
+
+    if (resumo.porObra.length) {
+      doc.text('Por obra', 14, y)
+      autoTable(doc, {
+        startY: y + 3,
+        head: [['Obra', 'Valor']],
+        body: resumo.porObra.map((o) => [o.nome, o.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]),
+        styles: { fontSize: 9 },
+      })
+      y = doc.lastAutoTable.finalY + 8
+    }
+
+    if (resumo.porFornecedor.length) {
+      doc.text('Por fornecedor', 14, y)
+      autoTable(doc, {
+        startY: y + 3,
+        head: [['Fornecedor', 'Valor']],
+        body: resumo.porFornecedor.map((f) => [f.nome, f.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]),
+        styles: { fontSize: 9 },
+      })
+    }
+
+    doc.save(`obrai-relatorio-${dataInicio}-a-${dataFim}.pdf`)
+  }
+
+  function exportarExcel() {
+    const wb = XLSX.utils.book_new()
+
+    const resumoRows = [
+      ['ObrAI — Relatório de despesas'],
+      [`Período: ${dataInicio} a ${dataFim}`],
+      [`Total: ${resumo.totalGeral}`],
+      [],
+      ['Categoria', 'Valor'],
+      ...resumo.porCategoria.map((c) => [c.nome, c.valor]),
+      [],
+      ['Obra', 'Valor'],
+      ...resumo.porObra.map((o) => [o.nome, o.valor]),
+      [],
+      ['Fornecedor', 'Valor'],
+      ...resumo.porFornecedor.map((f) => [f.nome, f.valor]),
+    ]
+    const wsResumo = XLSX.utils.aoa_to_sheet(resumoRows)
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo')
+
+    const despesasRows = [
+      ['Data', 'Obra', 'Fornecedor', 'Valor total', 'Origem', 'Status'],
+      ...despesas.map((d) => [
+        d.data_compra,
+        d.obras?.nome || '',
+        d.fornecedores?.nome || '',
+        Number(d.valor_total) || 0,
+        d.origem,
+        d.status_pagamento || '',
+      ]),
+    ]
+    const wsDespesas = XLSX.utils.aoa_to_sheet(despesasRows)
+    XLSX.utils.book_append_sheet(wb, wsDespesas, 'Despesas')
+
+    XLSX.writeFile(wb, `obrai-relatorio-${dataInicio}-a-${dataFim}.xlsx`)
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -239,12 +327,22 @@ export default function Relatorios() {
             </div>
           </div>
 
-          <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 13, color: '#6B7280' }}>{dataInicio} a {dataFim} · {resumo.qtdDespesas} despesa(s)</div>
-              <div style={{ fontWeight: 800, fontSize: 22 }}>
-                {resumo.totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#6B7280' }}>{dataInicio} a {dataFim} · {resumo.qtdDespesas} despesa(s)</div>
+                <div style={{ fontWeight: 800, fontSize: 22 }}>
+                  {resumo.totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
               </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={exportarPDF} disabled={carregando || resumo.qtdDespesas === 0}>
+                Exportar PDF
+              </button>
+              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={exportarExcel} disabled={carregando || resumo.qtdDespesas === 0}>
+                Exportar Excel
+              </button>
             </div>
           </div>
 

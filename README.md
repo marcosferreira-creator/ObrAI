@@ -90,6 +90,25 @@ painel do projeto.
    "existe alguma despesa duplicada". A IA responde só com base nos dados
    reais cadastrados — nunca inventa números.
 
+## Ajustes de usabilidade (setembro/2026)
+
+1. No SQL Editor do Supabase, rode `supabase/migration_fase3b.sql` — corrige
+   as subcategorias, que estavam vazias (o schema original só semeava as
+   categorias, não as subcategorias).
+2. Depois disso:
+   - Nos itens de uma despesa (manual, foto ou XML), dá pra criar uma
+     subcategoria nova na hora, pelo próprio formulário.
+   - Cada item agora tem só um campo de valor (preço unitário) — frete e
+     desconto foram removidos do formulário.
+   - Lançamentos aparecem clicáveis na tela da obra — abre pra editar
+     qualquer campo (inclusive fornecedor, se você lançou sem ele) ou
+     excluir.
+   - Fornecedores têm botão "Editar" pra completar CNPJ/telefone depois.
+   - Relatórios ganharam os botões "Exportar PDF" e "Exportar Excel".
+   - Layout mais compacto e fiel a tela de celular; o zoom por pinça fica
+     desativado só quando o app está aberto pela tela de início (instalado
+     como PWA) — no navegador normal continua funcionando.
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —

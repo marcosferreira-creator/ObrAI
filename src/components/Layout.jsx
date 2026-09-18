@@ -15,18 +15,21 @@ export default function Layout({ children }) {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff' }}>
       <header
         style={{
+          height: 'var(--obrai-header-h)',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          padding: '14px 18px',
+          padding: '0 16px',
           borderBottom: '1px solid #E4E6EA',
-          position: 'sticky',
+          position: 'fixed',
           top: 0,
+          left: 0,
+          right: 0,
           background: '#fff',
           zIndex: 10,
         }}
       >
-        <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 28 }} />
+        <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 40, imageRendering: '-webkit-optimize-contrast' }} />
         <Link
           to="/assistente"
           style={{
@@ -44,7 +47,18 @@ export default function Layout({ children }) {
         </Link>
       </header>
 
-      <main style={{ flex: 1, padding: 16, paddingBottom: 90, maxWidth: 720, width: '100%', margin: '0 auto' }}>
+      <main
+        style={{
+          flex: 1,
+          padding: 16,
+          paddingTop: 'calc(var(--obrai-header-h) + 16px)',
+          paddingBottom: 'calc(var(--obrai-nav-h) + env(safe-area-inset-bottom) + 24px)',
+          maxWidth: 720,
+          width: '100%',
+          margin: '0 auto',
+          overflowX: 'hidden',
+        }}
+      >
         {children}
       </main>
 
@@ -54,10 +68,13 @@ export default function Layout({ children }) {
           bottom: 0,
           left: 0,
           right: 0,
+          minHeight: 'var(--obrai-nav-h)',
           display: 'flex',
           justifyContent: 'space-around',
+          alignItems: 'center',
           background: '#0B1F3A',
-          padding: '10px 0 calc(10px + env(safe-area-inset-bottom))',
+          padding: '8px 4px calc(8px + env(safe-area-inset-bottom))',
+          zIndex: 10,
         }}
       >
         {NAV.map((item) => {
@@ -73,11 +90,12 @@ export default function Layout({ children }) {
                 gap: 2,
                 textDecoration: 'none',
                 color: active ? '#F2701C' : '#C9D2E0',
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: 600,
+                flex: 1,
               }}
             >
-              <span style={{ fontSize: 20 }}>{item.icon}</span>
+              <span style={{ fontSize: 19 }}>{item.icon}</span>
               {item.label}
             </Link>
           )

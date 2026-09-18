@@ -10,13 +10,11 @@ function novoItem() {
     quantidade: 1,
     unidade: 'un',
     preco_unitario: 0,
-    frete: 0,
-    desconto: 0,
   }
 }
 
 function totalItem(it) {
-  return Number(it.quantidade || 0) * Number(it.preco_unitario || 0) + Number(it.frete || 0) - Number(it.desconto || 0)
+  return Number(it.quantidade || 0) * Number(it.preco_unitario || 0)
 }
 
 export default function NovaDespesa() {
@@ -38,19 +36,23 @@ export default function NovaDespesa() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  const [criandoSubcatIdx, setCriandoSubcatIdx] = useState(null)
+  const [nomeNovaSubcat, setNomeNovaSubcat] = useState('')
+
+  async function carregar() {
+    const [o, f, c, s] = await Promise.all([
+      supabase.from('obras').select('id, nome'),
+      supabase.from('fornecedores').select('id, nome'),
+      supabase.from('categorias').select('id, nome').order('nome'),
+      supabase.from('subcategorias').select('id, nome, categoria_id').order('nome'),
+    ])
+    setObras(o.data || [])
+    setFornecedores(f.data || [])
+    setCategorias(c.data || [])
+    setSubcategorias(s.data || [])
+  }
+
   useEffect(() => {
-    async function carregar() {
-      const [o, f, c, s] = await Promise.all([
-        supabase.from('obras').select('id, nome'),
-        supabase.from('fornecedores').select('id, nome'),
-        supabase.from('categorias').select('id, nome').order('nome'),
-        supabase.from('subcategorias').select('id, nome, categoria_id'),
-      ])
-      setObras(o.data || [])
-      setFornecedores(f.data || [])
-      setCategorias(c.data || [])
-      setSubcategorias(s.data || [])
-    }
     carregar()
   }, [])
 
@@ -73,6 +75,34 @@ export default function NovaDespesa() {
       if (campo === 'categoria_id') copia[idx].subcategoria_id = ''
       return copia
     })
+  }
+
+  function selecionarSubcategoria(idx, valor) {
+    if (valor === '__nova__') {
+      setCriandoSubcatIdx(idx)
+      setNomeNovaSubcat('')
+      return
+    }
+    atualizarItem(idx, 'subcategoria_id', valor)
+  }
+
+  async function confirmarNovaSubcategoria(idx) {
+    const nome = nomeNovaSubcat.trim()
+    const categoriaId = itens[idx].categoria_id
+    if (!nome || !categoriaId) return
+    const { data, error } = await supabase
+      .from('subcategorias')
+      .insert({ categoria_id: categoriaId, nome })
+      .select()
+      .single()
+    if (error) {
+      setErro('Erro ao criar subcategoria: ' + error.message)
+      return
+    }
+    setSubcategorias((prev) => [...prev, data])
+    atualizarItem(idx, 'subcategoria_id', data.id)
+    setCriandoSubcatIdx(null)
+    setNomeNovaSubcat('')
   }
 
   function adicionarItem() {
@@ -119,12 +149,10 @@ export default function NovaDespesa() {
       produto: it.produto.trim(),
       categoria_id: it.categoria_id || null,
       subcategoria_id: it.subcategoria_id || null,
-      categoria_confirmada: true, // lançamento manual: usuário já escolheu a categoria
+      categoria_confirmada: true,
       quantidade: Number(it.quantidade) || 0,
       unidade: it.unidade,
       preco_unitario: Number(it.preco_unitario) || 0,
-      frete: Number(it.frete) || 0,
-      desconto: Number(it.desconto) || 0,
       valor_total: totalItem(it),
     }))
 
@@ -151,8 +179,8 @@ export default function NovaDespesa() {
   }
 
   return (
-    <form onSubmit={salvar} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form onSubmit={salvar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontWeight: 700 }}>Nova despesa</div>
 
         <div>
@@ -165,27 +193,28 @@ export default function NovaDespesa() {
           </select>
         </div>
 
-        <div>
-          <label className="label">Etapa (opcional)</label>
-          <select className="input" value={etapaId} onChange={(e) => setEtapaId(e.target.value)} disabled={!obraId}>
-            <option value="">Sem etapa específica</option>
-            {etapas.map((e) => (
-              <option key={e.id} value={e.id}>{e.nome}</option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label className="label">Etapa (opcional)</label>
+            <select className="input" value={etapaId} onChange={(e) => setEtapaId(e.target.value)} disabled={!obraId}>
+              <option value="">Sem etapa</option>
+              {etapas.map((e) => (
+                <option key={e.id} value={e.id}>{e.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="label">Fornecedor (opcional)</label>
+            <select className="input" value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)}>
+              <option value="">Sem fornecedor</option>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div>
-          <label className="label">Fornecedor (opcional)</label>
-          <select className="input" value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)}>
-            <option value="">Sem fornecedor</option>
-            {fornecedores.map((f) => (
-              <option key={f.id} value={f.id}>{f.nome}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}>
             <label className="label">Data da compra</label>
             <input className="input" type="date" value={dataCompra} onChange={(e) => setDataCompra(e.target.value)} required />
@@ -202,7 +231,7 @@ export default function NovaDespesa() {
           </div>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
           <input type="checkbox" checked={aPagarDepois} onChange={(e) => setAPagarDepois(e.target.checked)} />
           Ainda vou pagar essa despesa (entra em Contas a Pagar)
         </label>
@@ -215,16 +244,16 @@ export default function NovaDespesa() {
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontWeight: 700 }}>Itens</div>
         {itens.map((it, idx) => {
           const subcatsDoItem = subcategorias.filter((s) => s.categoria_id === it.categoria_id)
           return (
-            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 600, fontSize: 13, color: '#6B7280' }}>Item {idx + 1}</span>
+                <span style={{ fontWeight: 600, fontSize: 12, color: '#6B7280' }}>Item {idx + 1}</span>
                 {itens.length > 1 && (
-                  <button type="button" onClick={() => removerItem(idx)} style={{ border: 'none', background: 'none', color: '#D92D20', fontSize: 13 }}>
+                  <button type="button" onClick={() => removerItem(idx)} style={{ border: 'none', background: 'none', color: '#D92D20', fontSize: 12 }}>
                     Remover
                   </button>
                 )}
@@ -238,9 +267,9 @@ export default function NovaDespesa() {
                 required
               />
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <select className="input" value={it.categoria_id} onChange={(e) => atualizarItem(idx, 'categoria_id', e.target.value)}>
-                  <option value="">Categoria — a IA sugere depois</option>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select className="input" value={it.categoria_id} onChange={(e) => atualizarItem(idx, 'categoria_id', e.target.value)} style={{ flex: 1 }}>
+                  <option value="">Categoria</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
@@ -248,28 +277,40 @@ export default function NovaDespesa() {
                 <select
                   className="input"
                   value={it.subcategoria_id}
-                  onChange={(e) => atualizarItem(idx, 'subcategoria_id', e.target.value)}
+                  onChange={(e) => selecionarSubcategoria(idx, e.target.value)}
                   disabled={!it.categoria_id}
+                  style={{ flex: 1 }}
                 >
                   <option value="">Subcategoria</option>
                   {subcatsDoItem.map((s) => (
                     <option key={s.id} value={s.id}>{s.nome}</option>
                   ))}
+                  <option value="__nova__">+ Nova subcategoria…</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input" type="number" step="0.01" min="0" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} />
-                <input className="input" placeholder="Un" value={it.unidade} onChange={(e) => atualizarItem(idx, 'unidade', e.target.value)} style={{ maxWidth: 70 }} />
-                <input className="input" type="number" step="0.01" min="0" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} />
+              {criandoSubcatIdx === idx && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    className="input"
+                    placeholder="Nome da nova subcategoria"
+                    value={nomeNovaSubcat}
+                    onChange={(e) => setNomeNovaSubcat(e.target.value)}
+                    autoFocus
+                  />
+                  <button type="button" className="btn btn-ghost" onClick={() => confirmarNovaSubcategoria(idx)}>
+                    Criar
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input className="input" type="number" step="0.01" min="0" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} style={{ flex: 1 }} />
+                <input className="input" placeholder="Un" value={it.unidade} onChange={(e) => atualizarItem(idx, 'unidade', e.target.value)} style={{ maxWidth: 60 }} />
+                <input className="input" type="number" step="0.01" min="0" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} style={{ flex: 1 }} />
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input" type="number" step="0.01" min="0" placeholder="Frete" value={it.frete} onChange={(e) => atualizarItem(idx, 'frete', e.target.value)} />
-                <input className="input" type="number" step="0.01" min="0" placeholder="Desconto" value={it.desconto} onChange={(e) => atualizarItem(idx, 'desconto', e.target.value)} />
-              </div>
-
-              <div style={{ textAlign: 'right', fontWeight: 700 }}>
+              <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14 }}>
                 {totalItem(it).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </div>
             </div>

@@ -12,6 +12,7 @@ import Despesas from './pages/Despesas.jsx'
 import CapturarFoto from './pages/CapturarFoto.jsx'
 import CapturarXML from './pages/CapturarXML.jsx'
 import ConfirmarDespesa from './pages/ConfirmarDespesa.jsx'
+import DespesaDetalhe from './pages/DespesaDetalhe.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Assistente from './pages/Assistente.jsx'
 
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/despesas/foto" element={<CapturarFoto />} />
         <Route path="/despesas/xml" element={<CapturarXML />} />
         <Route path="/despesas/confirmar" element={<ConfirmarDespesa />} />
+        <Route path="/despesas/:id" element={<DespesaDetalhe />} />
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/assistente" element={<Assistente />} />
         <Route path="*" element={<Navigate to="/" replace />} />

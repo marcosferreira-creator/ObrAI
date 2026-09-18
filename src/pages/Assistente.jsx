@@ -41,7 +41,7 @@ export default function Assistente() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 180px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--obrai-header-h) - var(--obrai-nav-h) - 64px)' }}>
       <div style={{ fontWeight: 700, marginBottom: 8 }}>Assistente ObrAI</div>
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 10 }}>

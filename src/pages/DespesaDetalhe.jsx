@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 function totalItem(it) {
   return Number(it.quantidade || 0) * Number(it.preco_unitario || 0)
 }
 
-export default function ConfirmarDespesa() {
-  const { state } = useLocation()
+export default function DespesaDetalhe() {
+  const { id } = useParams()
   const navigate = useNavigate()
 
-  const extraido = state?.extraido || null
-  const obraId = state?.obraId || ''
-  const origem = state?.origem || 'manual'
-  const arquivoOriginal = state?.arquivoOriginal || null
-
+  const [carregando, setCarregando] = useState(true)
+  const [obraId, setObraId] = useState('')
   const [etapas, setEtapas] = useState([])
   const [fornecedores, setFornecedores] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -22,33 +19,53 @@ export default function ConfirmarDespesa() {
 
   const [etapaId, setEtapaId] = useState('')
   const [fornecedorId, setFornecedorId] = useState('')
-  const [dataCompra, setDataCompra] = useState(extraido?.data_compra || new Date().toISOString().slice(0, 10))
-  const [formaPagamento, setFormaPagamento] = useState(extraido?.forma_pagamento || 'pix')
-  const [aPagarDepois, setAPagarDepois] = useState(false)
-  const [vencimento, setVencimento] = useState('')
-  const [itens, setItens] = useState(() =>
-    (extraido?.itens || []).map((it) => ({
-      produto: it.produto || '',
-      categoria_id: '',
-      categoria_nome_sugerida: it.categoria_sugerida || '',
-      subcategoria_id: '',
-      quantidade: it.quantidade ?? '',
-      unidade: it.unidade || 'un',
-      preco_unitario: it.preco_unitario ?? '',
-    }))
-  )
+  const [dataCompra, setDataCompra] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState('pix')
+  const [statusPagamento, setStatusPagamento] = useState('pago')
+  const [itens, setItens] = useState([])
+
   const [salvando, setSalvando] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
   const [erro, setErro] = useState('')
+  const [ok, setOk] = useState(false)
 
   const [criandoSubcatIdx, setCriandoSubcatIdx] = useState(null)
   const [nomeNovaSubcat, setNomeNovaSubcat] = useState('')
 
   useEffect(() => {
-    if (!extraido || !obraId) return
     async function carregar() {
+      const { data: despesa } = await supabase
+        .from('despesas')
+        .select('*, itens_compra(*)')
+        .eq('id', id)
+        .single()
+
+      if (!despesa) {
+        setCarregando(false)
+        return
+      }
+
+      setObraId(despesa.obra_id)
+      setEtapaId(despesa.etapa_id || '')
+      setFornecedorId(despesa.fornecedor_id || '')
+      setDataCompra(despesa.data_compra)
+      setFormaPagamento(despesa.forma_pagamento || 'pix')
+      setStatusPagamento(despesa.status_pagamento)
+      setItens(
+        (despesa.itens_compra || []).map((it) => ({
+          id: it.id,
+          produto: it.produto,
+          categoria_id: it.categoria_id || '',
+          subcategoria_id: it.subcategoria_id || '',
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+          preco_unitario: it.preco_unitario,
+        }))
+      )
+
       const [e, f, c, s] = await Promise.all([
-        supabase.from('etapas').select('id, nome').eq('obra_id', obraId),
-        supabase.from('fornecedores').select('id, nome, cnpj'),
+        supabase.from('etapas').select('id, nome').eq('obra_id', despesa.obra_id),
+        supabase.from('fornecedores').select('id, nome').order('nome'),
         supabase.from('categorias').select('id, nome').order('nome'),
         supabase.from('subcategorias').select('id, nome, categoria_id').order('nome'),
       ])
@@ -56,42 +73,10 @@ export default function ConfirmarDespesa() {
       setFornecedores(f.data || [])
       setCategorias(c.data || [])
       setSubcategorias(s.data || [])
-
-      if (f.data?.length) {
-        const cnpjAlvo = extraido.fornecedor_cnpj?.replace(/\D/g, '')
-        const porCnpj = cnpjAlvo && f.data.find((x) => x.cnpj && x.cnpj.replace(/\D/g, '') === cnpjAlvo)
-        const porNome =
-          !porCnpj &&
-          extraido.fornecedor_nome &&
-          f.data.find((x) => x.nome.trim().toLowerCase() === extraido.fornecedor_nome.trim().toLowerCase())
-        if (porCnpj) setFornecedorId(porCnpj.id)
-        else if (porNome) setFornecedorId(porNome.id)
-      }
-
-      if (c.data?.length) {
-        setItens((prev) =>
-          prev.map((it) => {
-            if (!it.categoria_nome_sugerida) return it
-            const match = c.data.find((cat) => cat.nome.toLowerCase() === it.categoria_nome_sugerida.toLowerCase())
-            return match ? { ...it, categoria_id: match.id } : it
-          })
-        )
-      }
+      setCarregando(false)
     }
     carregar()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraido, obraId])
-
-  if (!extraido || !obraId) {
-    return (
-      <div className="card">
-        <div>Nenhuma nota pra confirmar. Volte e envie uma foto ou um XML.</div>
-        <button type="button" className="btn btn-primary" style={{ marginTop: 10 }} onClick={() => navigate('/despesas')}>
-          Voltar
-        </button>
-      </div>
-    )
-  }
+  }, [id])
 
   function atualizarItem(idx, campo, valor) {
     setItens((prev) => {
@@ -139,39 +124,37 @@ export default function ConfirmarDespesa() {
   }
 
   const totalGeral = itens.reduce((s, it) => s + totalItem(it), 0)
-  const fornecedorNaoEncontrado = !fornecedorId && extraido.fornecedor_nome
 
   async function salvar(e) {
     e.preventDefault()
     setErro('')
+    setOk(false)
     if (itens.some((it) => !it.produto.trim())) return setErro('Preencha o nome de todos os itens.')
-    if (aPagarDepois && !vencimento) return setErro('Informe o vencimento ou desmarque "ainda vou pagar".')
 
     setSalvando(true)
 
-    const { data: despesa, error: errDespesa } = await supabase
+    const { error: errDespesa } = await supabase
       .from('despesas')
-      .insert({
-        obra_id: obraId,
+      .update({
         etapa_id: etapaId || null,
         fornecedor_id: fornecedorId || null,
         data_compra: dataCompra,
         forma_pagamento: formaPagamento,
+        status_pagamento: statusPagamento,
         valor_total: totalGeral,
-        status_pagamento: aPagarDepois ? 'pendente' : 'pago',
-        origem,
       })
-      .select()
-      .single()
+      .eq('id', id)
 
     if (errDespesa) {
-      setErro('Erro ao salvar despesa: ' + errDespesa.message)
+      setErro('Erro ao salvar: ' + errDespesa.message)
       setSalvando(false)
       return
     }
 
+    // substitui os itens: apaga os antigos e insere os atuais
+    await supabase.from('itens_compra').delete().eq('despesa_id', id)
     const itensParaInserir = itens.map((it) => ({
-      despesa_id: despesa.id,
+      despesa_id: id,
       produto: it.produto.trim(),
       categoria_id: it.categoria_id || null,
       subcategoria_id: it.subcategoria_id || null,
@@ -181,80 +164,54 @@ export default function ConfirmarDespesa() {
       preco_unitario: Number(it.preco_unitario) || 0,
       valor_total: totalItem(it),
     }))
-
     const { error: errItens } = await supabase.from('itens_compra').insert(itensParaInserir)
 
+    setSalvando(false)
     if (errItens) {
-      setSalvando(false)
       setErro('Despesa salva, mas houve erro ao salvar os itens: ' + errItens.message)
       return
     }
+    setOk(true)
+  }
 
-    if (arquivoOriginal) {
-      try {
-        const ext = origem === 'xml' ? 'xml' : arquivoOriginal.name?.split('.').pop() || 'jpg'
-        const caminho = `${obraId}/${despesa.id}.${ext}`
-        const { error: errUpload } = await supabase.storage.from('notas').upload(caminho, arquivoOriginal, { upsert: true })
-        if (!errUpload) {
-          const { data: urlData } = supabase.storage.from('notas').getPublicUrl(caminho)
-          await supabase.from('anexos').insert({
-            despesa_id: despesa.id,
-            tipo: origem === 'xml' ? 'xml' : 'foto',
-            url: urlData.publicUrl,
-            dados_extraidos: extraido,
-          })
-        }
-      } catch (_) {
-        // guardar o anexo é best-effort — não trava o lançamento da despesa
-      }
+  async function excluir() {
+    if (!window.confirm('Excluir essa despesa e todos os itens dela? Essa ação não pode ser desfeita.')) return
+    setExcluindo(true)
+    const { error } = await supabase.from('despesas').delete().eq('id', id)
+    setExcluindo(false)
+    if (error) {
+      setErro('Erro ao excluir: ' + error.message)
+      return
     }
-
-    if (aPagarDepois) {
-      await supabase.from('contas_pagar').insert({
-        despesa_id: despesa.id,
-        fornecedor_id: fornecedorId || null,
-        valor: totalGeral,
-        vencimento,
-        status: 'pendente',
-      })
-    }
-
-    setSalvando(false)
     navigate(`/obras/${obraId}`)
   }
+
+  if (carregando) return <div style={{ color: '#6B7280' }}>Carregando…</div>
 
   return (
     <form onSubmit={salvar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontWeight: 700 }}>Confirmar despesa {origem === 'foto' ? '(lida por foto)' : '(lida do XML)'}</div>
-        <div style={{ fontSize: 12, color: '#6B7280' }}>
-          Confira os campos abaixo — os que a IA não teve certeza ficaram em branco. Corrija o que precisar antes de salvar.
-        </div>
+        <div style={{ fontWeight: 700 }}>Editar despesa</div>
 
-        <div>
-          <label className="label">Etapa (opcional)</label>
-          <select className="input" value={etapaId} onChange={(e) => setEtapaId(e.target.value)}>
-            <option value="">Sem etapa específica</option>
-            {etapas.map((e) => (
-              <option key={e.id} value={e.id}>{e.nome}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="label">Fornecedor</label>
-          <select className="input" value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)}>
-            <option value="">Sem fornecedor</option>
-            {fornecedores.map((f) => (
-              <option key={f.id} value={f.id}>{f.nome}</option>
-            ))}
-          </select>
-          {fornecedorNaoEncontrado && (
-            <div style={{ fontSize: 12, color: '#B45309', marginTop: 4 }}>
-              A nota parece ser de "{extraido.fornecedor_nome}", mas esse fornecedor não está cadastrado. Cadastre em
-              Fornecedores se quiser vincular, ou deixe "Sem fornecedor".
-            </div>
-          )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label className="label">Etapa (opcional)</label>
+            <select className="input" value={etapaId} onChange={(e) => setEtapaId(e.target.value)}>
+              <option value="">Sem etapa</option>
+              {etapas.map((e) => (
+                <option key={e.id} value={e.id}>{e.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="label">Fornecedor</label>
+            <select className="input" value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)}>
+              <option value="">Sem fornecedor</option>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
@@ -274,17 +231,14 @@ export default function ConfirmarDespesa() {
           </div>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-          <input type="checkbox" checked={aPagarDepois} onChange={(e) => setAPagarDepois(e.target.checked)} />
-          Ainda vou pagar essa despesa (entra em Contas a Pagar)
-        </label>
-
-        {aPagarDepois && (
-          <div>
-            <label className="label">Vencimento</label>
-            <input className="input" type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} required />
-          </div>
-        )}
+        <div>
+          <label className="label">Status do pagamento</label>
+          <select className="input" value={statusPagamento} onChange={(e) => setStatusPagamento(e.target.value)}>
+            <option value="pago">Pago</option>
+            <option value="pendente">Pendente</option>
+            <option value="vencido">Vencido</option>
+          </select>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -292,7 +246,7 @@ export default function ConfirmarDespesa() {
         {itens.map((it, idx) => {
           const subcatsDoItem = subcategorias.filter((s) => s.categoria_id === it.categoria_id)
           return (
-            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div key={it.id || idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600, fontSize: 12, color: '#6B7280' }}>Item {idx + 1}</span>
                 {itens.length > 1 && (
@@ -312,9 +266,7 @@ export default function ConfirmarDespesa() {
 
               <div style={{ display: 'flex', gap: 6 }}>
                 <select className="input" value={it.categoria_id} onChange={(e) => atualizarItem(idx, 'categoria_id', e.target.value)} style={{ flex: 1 }}>
-                  <option value="">
-                    {it.categoria_nome_sugerida && !it.categoria_id ? 'Categoria — IA não teve certeza' : 'Categoria'}
-                  </option>
+                  <option value="">Categoria</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
@@ -375,10 +327,16 @@ export default function ConfirmarDespesa() {
       </div>
 
       {erro && <div style={{ color: '#D92D20' }}>{erro}</div>}
+      {ok && <div style={{ color: '#16A34A' }}>Salvo com sucesso.</div>}
 
-      <button className="btn btn-accent" disabled={salvando}>
-        {salvando ? 'Salvando…' : 'Confirmar e salvar despesa'}
-      </button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-accent" disabled={salvando} style={{ flex: 1 }}>
+          {salvando ? 'Salvando…' : 'Salvar alterações'}
+        </button>
+        <button type="button" className="btn btn-ghost" style={{ color: '#D92D20' }} disabled={excluindo} onClick={excluir}>
+          {excluindo ? 'Excluindo…' : 'Excluir'}
+        </button>
+      </div>
     </form>
   )
 }

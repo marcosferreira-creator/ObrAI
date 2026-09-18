@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 function fmt(v) {
@@ -83,13 +83,20 @@ export default function ObraDetalhe() {
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Lançamentos</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {despesas.map((d) => (
-            <div key={d.id} className="card" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Link
+              key={d.id}
+              to={`/despesas/${d.id}`}
+              className="card"
+              style={{ display: 'flex', justifyContent: 'space-between', textDecoration: 'none', color: 'inherit' }}
+            >
               <div>
                 <div style={{ fontWeight: 600 }}>{d.fornecedores?.nome || 'Sem fornecedor'}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>{d.data_compra}</div>
+                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  {d.data_compra}{d.status_pagamento === 'pendente' ? ' · a pagar' : ''}
+                </div>
               </div>
               <div style={{ fontWeight: 700 }}>{fmt(d.valor_total)}</div>
-            </div>
+            </Link>
           ))}
           {despesas.length === 0 && <div style={{ color: '#6B7280' }}>Nenhum lançamento ainda.</div>}
         </div>
