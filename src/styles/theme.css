@@ -68,3 +68,13 @@ a { color: var(--obrai-navy); }
   margin-bottom: 4px;
   display: block;
 }
+
+/* O Safari do iPhone desenha o campo de data com uma "cápsula" nativa por
+   dentro do nosso .input, e ela não respeita nosso border/padding — daí a
+   aparência de caixa em cima de caixa. Isso tira a casca nativa e deixa só
+   o nosso estilo. */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 1.4em;
+}
