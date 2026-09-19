@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { criarUsuario } from '../lib/gerenciarUsuarios'
-import { usePermissao } from '../lib/AuthContext.jsx'
+import { criarUsuario, criarEmpresa } from '../lib/gerenciarUsuarios'
+import { useAuth, usePermissao } from '../lib/AuthContext.jsx'
 
 const PAPEIS = [
   { valor: 'admin', label: 'Admin — acesso total' },
@@ -16,6 +16,7 @@ function labelPapel(valor) {
 
 export default function UsuariosAdmin() {
   const souAdmin = usePermissao('admin')
+  const { usuario } = useAuth()
 
   const [lista, setLista] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -27,6 +28,16 @@ export default function UsuariosAdmin() {
   const [criando, setCriando] = useState(false)
   const [erro, setErro] = useState('')
   const [ok, setOk] = useState('')
+
+  // Só existe pra quem é super_admin (hoje, só o Marcos) — cria uma
+  // empresa cliente nova, isolada de todo o resto.
+  const [nomeEmpresa, setNomeEmpresa] = useState('')
+  const [nomeAdminEmpresa, setNomeAdminEmpresa] = useState('')
+  const [emailAdminEmpresa, setEmailAdminEmpresa] = useState('')
+  const [senhaAdminEmpresa, setSenhaAdminEmpresa] = useState('')
+  const [criandoEmpresa, setCriandoEmpresa] = useState(false)
+  const [erroEmpresa, setErroEmpresa] = useState('')
+  const [okEmpresa, setOkEmpresa] = useState('')
 
   async function carregar() {
     setCarregando(true)
@@ -73,8 +84,74 @@ export default function UsuariosAdmin() {
     carregar()
   }
 
+  async function criarEmpresaNova(e) {
+    e.preventDefault()
+    setErroEmpresa('')
+    setOkEmpresa('')
+    setCriandoEmpresa(true)
+    try {
+      const r = await criarEmpresa({
+        nome_empresa: nomeEmpresa,
+        nome: nomeAdminEmpresa,
+        email: emailAdminEmpresa,
+        senha: senhaAdminEmpresa,
+      })
+      setOkEmpresa(`Empresa "${r.empresa}" criada. Login admin: ${r.email}.`)
+      setNomeEmpresa('')
+      setNomeAdminEmpresa('')
+      setEmailAdminEmpresa('')
+      setSenhaAdminEmpresa('')
+    } catch (err) {
+      setErroEmpresa(err.message)
+    } finally {
+      setCriandoEmpresa(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {usuario?.empresas?.nome && (
+        <div style={{ fontSize: 12, color: '#6B7280' }}>Empresa: {usuario.empresas.nome}</div>
+      )}
+
+      {usuario?.super_admin && (
+        <form
+          onSubmit={criarEmpresaNova}
+          className="card"
+          style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid #F2701C' }}
+        >
+          <div style={{ fontWeight: 700 }}>Criar empresa cliente nova</div>
+          <div style={{ fontSize: 12, color: '#6B7280' }}>
+            Isso cria um espaço isolado (dados, obras e usuários próprios) pra
+            um novo cliente do ObrAI, com o primeiro login como admin dele.
+          </div>
+
+          <div>
+            <label className="label">Nome da empresa</label>
+            <input className="input" value={nomeEmpresa} onChange={(e) => setNomeEmpresa(e.target.value)} required />
+          </div>
+          <div>
+            <label className="label">Nome do admin</label>
+            <input className="input" value={nomeAdminEmpresa} onChange={(e) => setNomeAdminEmpresa(e.target.value)} required />
+          </div>
+          <div>
+            <label className="label">E-mail do admin</label>
+            <input className="input" type="email" value={emailAdminEmpresa} onChange={(e) => setEmailAdminEmpresa(e.target.value)} required />
+          </div>
+          <div>
+            <label className="label">Senha provisória</label>
+            <input className="input" value={senhaAdminEmpresa} onChange={(e) => setSenhaAdminEmpresa(e.target.value)} required minLength={6} />
+          </div>
+
+          {erroEmpresa && <div style={{ color: '#D92D20', fontSize: 13 }}>{erroEmpresa}</div>}
+          {okEmpresa && <div style={{ color: '#16A34A', fontSize: 13 }}>{okEmpresa}</div>}
+
+          <button className="btn btn-ghost" disabled={criandoEmpresa}>
+            {criandoEmpresa ? 'Criando…' : 'Criar empresa'}
+          </button>
+        </form>
+      )}
+
       <form onSubmit={criar} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontWeight: 700 }}>Criar acesso para funcionário</div>
 

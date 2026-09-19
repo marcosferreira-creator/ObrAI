@@ -135,11 +135,53 @@ cada um pode *fazer*, não o que vê. Se no futuro você precisar restringir
 por obra específica, o banco já tem a tabela `permissoes_obra` pronta pra
 isso — é só avisar.
 
+## Fase 6 — multi-empresa (SaaS: vender para outros clientes)
+
+Isso transforma o sistema de "um workspace compartilhado" para "cada
+empresa cliente só vê e mexe nos próprios dados" — necessário para vender
+o ObrAI para outras construtoras sem elas verem os dados umas das outras.
+
+1. **Antes de rodar**: abra `supabase/migration_fase6.sql` e confira as
+   duas linhas com e-mail fixo — precisam ser exatamente o e-mail que você
+   e o Gustavo usam pra logar (confira em Authentication → Users no
+   Supabase):
+   - `marcos.ferreira.026@icloud.com` → vira o dono da empresa principal e
+     **super admin** (só ele pode criar empresas novas depois).
+   - `gustavofuzari@icloud.com` → vira **admin** de uma empresa nova e
+     separada, isolada da sua.
+
+   Se algum dos dois estiver errado, o script já para com um erro claro
+   (`raise exception`) em vez de continuar silenciosamente — ajuste o
+   e-mail no arquivo e rode de novo.
+
+2. No SQL Editor do Supabase, rode o conteúdo de
+   `supabase/migration_fase6.sql`. Isso cria a tabela `empresas`, adiciona
+   `empresa_id` em todas as tabelas de dados (menos `categorias`, que
+   continua global), migra tudo que já existe para a sua empresa, cria a
+   empresa do Gustavo, e reescreve todas as regras de segurança do banco
+   para isolar por empresa — inclusive corrigindo um problema em que um
+   admin conseguiria ver usuários de outra empresa.
+3. No painel do Supabase, abra a Edge Function `gerenciar-usuarios` (Edge
+   Functions → clique nela → "Open Editor" / "Deploy new version") e
+   substitua todo o conteúdo pelo novo
+   `supabase/functions/gerenciar-usuarios/index.ts`. Deploy.
+4. No app, em **"👤 Usuários"**, sua conta (super admin) agora tem uma
+   seção extra no topo: **"Criar empresa cliente nova"** — preenche nome da
+   empresa + nome/e-mail/senha provisória do admin dela, e pronto: nasce um
+   espaço isolado pra esse cliente, com o primeiro login já pronto pra
+   passar pra ele.
+
+Depois disso, o fluxo pra vender pra um cliente novo é: você (super admin)
+cria a empresa dele em "Usuários" → passa e-mail + senha provisória → ele
+loga, troca a senha (em Authentication do Supabase, por enquanto — ainda
+não tem tela de "trocar minha senha" no app) e começa a cadastrar as
+próprias obras, sem ver nada do que é seu.
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —
   foto e XML já estão prontos).
-- Fase 3: relatórios exportáveis em PDF/Excel (hoje só tem visualização
-  dentro do app).
-- Fase 5: permissões multiusuário (o schema já tem `usuarios` e
-  `permissoes_obra` prontos para isso).
+- Tela do próprio usuário trocar a senha (hoje só o admin define a senha
+  provisória na criação — trocar depois é feito no painel do Supabase).
+- Cobrança/assinatura por empresa (hoje a criação de empresa é manual, feita
+  por você — não tem checkout nem controle de pagamento ainda).

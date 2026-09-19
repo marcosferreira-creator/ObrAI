@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
       setCarregandoUsuario(true)
       const { data } = await supabase
         .from('usuarios')
-        .select('nome, papel, ativo')
+        .select('nome, papel, ativo, super_admin, empresa_id, empresas(nome)')
         .eq('auth_user_id', session.user.id)
         .maybeSingle()
       setUsuario(data || null)
