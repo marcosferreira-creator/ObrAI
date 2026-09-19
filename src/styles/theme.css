@@ -51,6 +51,8 @@ a { color: var(--obrai-navy); }
 
 .input {
   width: 100%;
+  min-width: 0; /* sem isso, o <input type="date"> nativo do iPhone não encolhe dentro
+                   da coluna flex e invade o campo vizinho (o bug do "um em cima do outro") */
   padding: 9px 12px;
   border-radius: 8px;
   border: 1px solid var(--obrai-border);
