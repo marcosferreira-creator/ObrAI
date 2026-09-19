@@ -145,7 +145,7 @@ o ObrAI para outras construtoras sem elas verem os dados umas das outras.
    duas linhas com e-mail fixo — precisam ser exatamente o e-mail que você
    e o Gustavo usam pra logar (confira em Authentication → Users no
    Supabase):
-   - `marcos.ferreira.026@icloud.com` → vira o dono da empresa principal e
+   - `marcos.ferreira.026@gmail.com` → vira o dono da empresa principal e
      **super admin** (só ele pode criar empresas novas depois).
    - `gustavofuzari@icloud.com` → vira **admin** de uma empresa nova e
      separada, isolada da sua.

@@ -58,10 +58,10 @@ begin
   insert into empresas (nome) values ('ObrAI — conta principal') returning id into empresa_marcos;
 
   update usuarios set empresa_id = empresa_marcos, super_admin = true
-  where email = 'marcos.ferreira.026@icloud.com';
+  where email = 'marcos.ferreira.026@gmail.com';
 
   if not found then
-    raise exception 'Nenhum usuário com email marcos.ferreira.026@icloud.com encontrado — confira o email exato usado no login (Authentication > Users no Supabase) e ajuste este script antes de rodar de novo.';
+    raise exception 'Nenhum usuário com email marcos.ferreira.026@gmail.com encontrado — confira o email exato usado no login (Authentication > Users no Supabase) e ajuste este script antes de rodar de novo.';
   end if;
 
   update obras set empresa_id = empresa_marcos where empresa_id is null;
