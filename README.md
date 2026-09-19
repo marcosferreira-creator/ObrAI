@@ -177,6 +177,30 @@ loga, troca a senha (em Authentication do Supabase, por enquanto — ainda
 não tem tela de "trocar minha senha" no app) e começa a cadastrar as
 próprias obras, sem ver nada do que é seu.
 
+## Ajustes de usabilidade (fase 7)
+
+1. No SQL Editor do Supabase, rode `supabase/migration_fase7.sql`. Isso:
+   - permite excluir uma etapa mesmo que já tenha despesa lançada nela (a
+     despesa só fica sem etapa, em vez de travar a exclusão);
+   - adiciona o status "parcial" às despesas, pra suportar pagamento
+     parcelado.
+2. Depois disso:
+   - Em **Obras**, dá pra editar (nome, orçamento, endereço) ou excluir uma
+     obra criada errada — botão "✏️ Editar" na tela da obra. Só não deixa
+     excluir se já tiver despesa lançada nela (exclui as despesas primeiro).
+   - Etapas agora têm botões de editar (✏️) e excluir (✕) na tela da obra.
+   - Campos de valor (orçamento, quantidade, preço unitário, pagamentos)
+     agora aceitam tanto vírgula quanto ponto como separador decimal sem
+     bagunçar o número digitado.
+   - Nova seção **"Pagamentos"** dentro de cada despesa (tela de detalhe):
+     dá pra registrar pagamentos parciais conforme forem sendo feitos (ex:
+     empreiteiro que recebe aos poucos conforme entrega o serviço) — mostra
+     total já pago e saldo devedor, e o status da despesa ("pendente" /
+     "pago parcialmente" / "pago") atualiza sozinho.
+   - Cabeçalho: a logo agora leva pra tela inicial ao tocar, e o slogan
+     (que ficava ilegível no tamanho pequeno) foi removido do cabeçalho —
+     continua só o símbolo + "ObrAI".
+
 ## O que ainda falta (próximas fases, já combinadas)
 
 - Fase 2: leitura de QR Code via provedor pago (cotação pendente —

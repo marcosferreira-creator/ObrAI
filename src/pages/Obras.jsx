@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { usePermissao } from '../lib/AuthContext.jsx'
+import { parseValorBR } from '../lib/numero'
 
 export default function Obras() {
   const podeCriar = usePermissao('admin', 'financeiro')
@@ -25,7 +26,7 @@ export default function Obras() {
     setSalvando(true)
     await supabase.from('obras').insert({
       nome: novoNome.trim(),
-      orcamento_previsto: Number(novoOrcamento) || 0,
+      orcamento_previsto: parseValorBR(novoOrcamento),
     })
     setNovoNome('')
     setNovoOrcamento('')
@@ -46,8 +47,9 @@ export default function Obras() {
             <label className="label">Orçamento previsto (R$)</label>
             <input
               className="input"
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
               value={novoOrcamento}
               onChange={(e) => setNovoOrcamento(e.target.value)}
             />

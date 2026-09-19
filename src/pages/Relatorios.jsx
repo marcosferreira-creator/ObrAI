@@ -4,6 +4,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { usePermissao } from '../lib/AuthContext.jsx'
+import { recalcularStatusPagamento } from '../lib/statusPagamento'
 
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
@@ -170,7 +171,7 @@ export default function Relatorios() {
   async function marcarComoPago(conta) {
     await supabase.from('contas_pagar').update({ status: 'pago', data_pagamento: hojeISO() }).eq('id', conta.id)
     if (conta.despesa_id) {
-      await supabase.from('despesas').update({ status_pagamento: 'pago' }).eq('id', conta.despesa_id)
+      await recalcularStatusPagamento(conta.despesa_id)
     }
     setContasPagar((prev) => prev.filter((c) => c.id !== conta.id))
   }

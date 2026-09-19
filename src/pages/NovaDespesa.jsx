@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { parseValorBR } from '../lib/numero'
 
 function novoItem() {
   return {
@@ -14,7 +15,7 @@ function novoItem() {
 }
 
 function totalItem(it) {
-  return Number(it.quantidade || 0) * Number(it.preco_unitario || 0)
+  return parseValorBR(it.quantidade) * parseValorBR(it.preco_unitario)
 }
 
 export default function NovaDespesa() {
@@ -150,9 +151,9 @@ export default function NovaDespesa() {
       categoria_id: it.categoria_id || null,
       subcategoria_id: it.subcategoria_id || null,
       categoria_confirmada: true,
-      quantidade: Number(it.quantidade) || 0,
+      quantidade: parseValorBR(it.quantidade),
       unidade: it.unidade,
-      preco_unitario: Number(it.preco_unitario) || 0,
+      preco_unitario: parseValorBR(it.preco_unitario),
       valor_total: totalItem(it),
     }))
 
@@ -305,9 +306,9 @@ export default function NovaDespesa() {
               )}
 
               <div style={{ display: 'flex', gap: 6 }}>
-                <input className="input" type="number" step="0.01" min="0" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} style={{ flex: 1 }} />
+                <input className="input" type="text" inputMode="decimal" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} style={{ flex: 1 }} />
                 <input className="input" placeholder="Un" value={it.unidade} onChange={(e) => atualizarItem(idx, 'unidade', e.target.value)} style={{ maxWidth: 60 }} />
-                <input className="input" type="number" step="0.01" min="0" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} style={{ flex: 1 }} />
+                <input className="input" type="text" inputMode="decimal" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} style={{ flex: 1 }} />
               </div>
 
               <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14 }}>

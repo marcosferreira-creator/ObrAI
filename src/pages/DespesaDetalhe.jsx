@@ -2,9 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { usePermissao } from '../lib/AuthContext.jsx'
+import { parseValorBR } from '../lib/numero'
+import { recalcularStatusPagamento } from '../lib/statusPagamento'
 
 function totalItem(it) {
-  return Number(it.quantidade || 0) * Number(it.preco_unitario || 0)
+  return parseValorBR(it.quantidade) * parseValorBR(it.preco_unitario)
+}
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 export default function DespesaDetalhe() {
@@ -34,6 +40,23 @@ export default function DespesaDetalhe() {
   const [criandoSubcatIdx, setCriandoSubcatIdx] = useState(null)
   const [nomeNovaSubcat, setNomeNovaSubcat] = useState('')
 
+  const [valorTotalSalvo, setValorTotalSalvo] = useState(0)
+  const [pagamentos, setPagamentos] = useState([])
+  const [novoPagValor, setNovoPagValor] = useState('')
+  const [novoPagData, setNovoPagData] = useState(hojeISO())
+  const [novoPagJaPago, setNovoPagJaPago] = useState(true)
+  const [salvandoPagamento, setSalvandoPagamento] = useState(false)
+  const [erroPagamento, setErroPagamento] = useState('')
+
+  async function carregarPagamentos() {
+    const { data } = await supabase
+      .from('contas_pagar')
+      .select('*')
+      .eq('despesa_id', id)
+      .order('vencimento', { ascending: true })
+    setPagamentos(data || [])
+  }
+
   useEffect(() => {
     async function carregar() {
       const { data: despesa } = await supabase
@@ -48,6 +71,7 @@ export default function DespesaDetalhe() {
       }
 
       setObraId(despesa.obra_id)
+      setValorTotalSalvo(Number(despesa.valor_total) || 0)
       setEtapaId(despesa.etapa_id || '')
       setFornecedorId(despesa.fornecedor_id || '')
       setDataCompra(despesa.data_compra)
@@ -78,7 +102,57 @@ export default function DespesaDetalhe() {
       setCarregando(false)
     }
     carregar()
+    carregarPagamentos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  const totalPago = pagamentos.filter((p) => p.status === 'pago').reduce((s, p) => s + Number(p.valor || 0), 0)
+  const saldoDevedor = Math.max(0, valorTotalSalvo - totalPago)
+
+  async function registrarPagamento(e) {
+    e.preventDefault()
+    setErroPagamento('')
+    const valor = parseValorBR(novoPagValor)
+    if (valor <= 0) return setErroPagamento('Informe um valor válido.')
+    if (!novoPagData) return setErroPagamento('Informe a data.')
+
+    setSalvandoPagamento(true)
+    const { error } = await supabase.from('contas_pagar').insert({
+      despesa_id: id,
+      fornecedor_id: fornecedorId || null,
+      valor,
+      vencimento: novoPagData,
+      status: novoPagJaPago ? 'pago' : 'pendente',
+      data_pagamento: novoPagJaPago ? novoPagData : null,
+    })
+    if (error) {
+      setSalvandoPagamento(false)
+      setErroPagamento('Erro ao registrar: ' + error.message)
+      return
+    }
+    const novoStatus = await recalcularStatusPagamento(id)
+    setStatusPagamento(novoStatus)
+    setNovoPagValor('')
+    setNovoPagData(hojeISO())
+    setNovoPagJaPago(true)
+    await carregarPagamentos()
+    setSalvandoPagamento(false)
+  }
+
+  async function marcarPagamentoComoPago(pagamento) {
+    await supabase.from('contas_pagar').update({ status: 'pago', data_pagamento: hojeISO() }).eq('id', pagamento.id)
+    const novoStatus = await recalcularStatusPagamento(id)
+    setStatusPagamento(novoStatus)
+    await carregarPagamentos()
+  }
+
+  async function excluirPagamento(pagamento) {
+    if (!window.confirm('Excluir esse pagamento/parcela?')) return
+    await supabase.from('contas_pagar').delete().eq('id', pagamento.id)
+    const novoStatus = await recalcularStatusPagamento(id)
+    setStatusPagamento(novoStatus)
+    await carregarPagamentos()
+  }
 
   function atualizarItem(idx, campo, valor) {
     setItens((prev) => {
@@ -161,9 +235,9 @@ export default function DespesaDetalhe() {
       categoria_id: it.categoria_id || null,
       subcategoria_id: it.subcategoria_id || null,
       categoria_confirmada: true,
-      quantidade: Number(it.quantidade) || 0,
+      quantidade: parseValorBR(it.quantidade),
       unidade: it.unidade,
-      preco_unitario: Number(it.preco_unitario) || 0,
+      preco_unitario: parseValorBR(it.preco_unitario),
       valor_total: totalItem(it),
     }))
     const { error: errItens } = await supabase.from('itens_compra').insert(itensParaInserir)
@@ -173,6 +247,7 @@ export default function DespesaDetalhe() {
       setErro('Despesa salva, mas houve erro ao salvar os itens: ' + errItens.message)
       return
     }
+    setValorTotalSalvo(totalGeral)
     setOk(true)
   }
 
@@ -237,10 +312,110 @@ export default function DespesaDetalhe() {
           <label className="label">Status do pagamento</label>
           <select className="input" value={statusPagamento} onChange={(e) => setStatusPagamento(e.target.value)}>
             <option value="pago">Pago</option>
+            <option value="parcial">Pago parcialmente</option>
             <option value="pendente">Pendente</option>
             <option value="vencido">Vencido</option>
           </select>
+          {pagamentos.length > 0 && (
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
+              Esse status é atualizado automaticamente conforme os pagamentos abaixo.
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontWeight: 700 }}>Pagamentos</div>
+        <div style={{ fontSize: 12, color: '#6B7280' }}>
+          Útil pra despesas pagas aos poucos — ex: uma empreitada que você vai
+          quitando conforme o serviço avança.
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+          <span>Total da despesa</span>
+          <span style={{ fontWeight: 700 }}>{valorTotalSalvo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+          <span>Já pago</span>
+          <span style={{ fontWeight: 700, color: '#16A34A' }}>{totalPago.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+          <span>Saldo devedor</span>
+          <span style={{ fontWeight: 700, color: saldoDevedor > 0 ? '#D92D20' : '#16A34A' }}>
+            {saldoDevedor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </span>
+        </div>
+        {valorTotalSalvo > 0 && (
+          <div style={{ background: '#F2F3F5', borderRadius: 8, height: 8, overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${Math.min(100, (totalPago / valorTotalSalvo) * 100)}%`,
+                height: '100%',
+                background: totalPago >= valorTotalSalvo ? '#16A34A' : '#F2701C',
+              }}
+            />
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {pagamentos.map((p) => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9FAFB', borderRadius: 8, padding: '6px 10px' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                  {Number(p.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>
+                  {p.status === 'pago' ? `Pago em ${p.data_pagamento || p.vencimento}` : `Vence em ${p.vencimento}`}
+                </div>
+              </div>
+              {podeEditar && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {p.status !== 'pago' && (
+                    <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => marcarPagamentoComoPago(p)}>
+                      Marcar pago
+                    </button>
+                  )}
+                  <button type="button" onClick={() => excluirPagamento(p)} style={{ border: 'none', background: 'none', color: '#D92D20', fontSize: 12 }}>
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          {pagamentos.length === 0 && <div style={{ color: '#6B7280', fontSize: 13 }}>Nenhum pagamento registrado ainda.</div>}
+        </div>
+
+        {podeEditar && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid #E4E6EA', paddingTop: 10 }}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>Registrar pagamento ou parcela</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                className="input"
+                type="text"
+                inputMode="decimal"
+                placeholder="Valor (R$)"
+                value={novoPagValor}
+                onChange={(e) => setNovoPagValor(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <input
+                className="input"
+                type="date"
+                value={novoPagData}
+                onChange={(e) => setNovoPagData(e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <input type="checkbox" checked={novoPagJaPago} onChange={(e) => setNovoPagJaPago(e.target.checked)} />
+              Já paguei esse valor (senão entra como parcela a vencer)
+            </label>
+            {erroPagamento && <div style={{ color: '#D92D20', fontSize: 12 }}>{erroPagamento}</div>}
+            <button type="button" className="btn btn-ghost" disabled={salvandoPagamento} onClick={registrarPagamento}>
+              {salvandoPagamento ? 'Salvando…' : '+ Registrar'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -304,9 +479,9 @@ export default function DespesaDetalhe() {
               )}
 
               <div style={{ display: 'flex', gap: 6 }}>
-                <input className="input" type="number" step="0.01" min="0" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} style={{ flex: 1 }} />
+                <input className="input" type="text" inputMode="decimal" placeholder="Qtd" value={it.quantidade} onChange={(e) => atualizarItem(idx, 'quantidade', e.target.value)} style={{ flex: 1 }} />
                 <input className="input" placeholder="Un" value={it.unidade} onChange={(e) => atualizarItem(idx, 'unidade', e.target.value)} style={{ maxWidth: 60 }} />
-                <input className="input" type="number" step="0.01" min="0" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} style={{ flex: 1 }} />
+                <input className="input" type="text" inputMode="decimal" placeholder="Preço unit." value={it.preco_unitario} onChange={(e) => atualizarItem(idx, 'preco_unitario', e.target.value)} style={{ flex: 1 }} />
               </div>
 
               <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14 }}>

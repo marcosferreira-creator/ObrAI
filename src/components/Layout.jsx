@@ -32,7 +32,9 @@ export default function Layout({ children }) {
           zIndex: 10,
         }}
       >
-        <img src="/logo-horizontal.png" alt="ObrAI" style={{ height: 48, imageRendering: '-webkit-optimize-contrast' }} />
+        <Link to="/" style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/logo-header.png" alt="ObrAI" style={{ height: 40, imageRendering: '-webkit-optimize-contrast' }} />
+        </Link>
         <Link
           to="/assistente"
           style={{
