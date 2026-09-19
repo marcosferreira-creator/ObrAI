@@ -53,7 +53,9 @@ a { color: var(--obrai-navy); }
   width: 100%;
   min-width: 0; /* sem isso, o <input type="date"> nativo do iPhone não encolhe dentro
                    da coluna flex e invade o campo vizinho (o bug do "um em cima do outro") */
-  padding: 9px 12px;
+  height: 40px; /* altura fixa — sem isso o campo de data do iPhone reserva uma altura
+                   maior por conta própria e fica desalinhado dos campos vizinhos */
+  padding: 0 12px;
   border-radius: 8px;
   border: 1px solid var(--obrai-border);
   font-size: 14px;
@@ -76,5 +78,5 @@ a { color: var(--obrai-navy); }
 input[type='date'] {
   -webkit-appearance: none;
   appearance: none;
-  min-height: 1.4em;
+  line-height: 38px; /* centraliza o texto verticalmente dentro dos 40px de altura */
 }
